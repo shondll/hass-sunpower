@@ -91,7 +91,12 @@ def convert_sunpower_data(sunpower_data):
     """Convert PVS data into indexable format data[device_type][serial]."""
     data = {}
     for device in sunpower_data["devices"]:
-        data.setdefault(device["DEVICE_TYPE"], {})[device["SERIAL"]] = device
+        dev_type = device["DEVICE_TYPE"]
+        data.setdefault(dev_type, {})[device["SERIAL"]] = device
+        if dev_type == PVS_DEVICE_TYPE:
+            data[PVS_DEVICE_TYPE][device["SERIAL"]]["varserver_uptime"] = sunpower_data[
+                "varserver_uptime"
+            ]
 
     create_vmeter(data)
 

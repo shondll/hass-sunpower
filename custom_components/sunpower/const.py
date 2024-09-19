@@ -205,6 +205,15 @@ SUNPOWER_SENSORS = {
                 "state": SensorStateClass.TOTAL_INCREASING,
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
+            "PVS_VARSERVER_UPTIME": {
+                "field": "varserver_uptime",
+                "title": "{SUN_POWER}{MODEL} {SERIAL} Varserver Uptime",
+                "unit": UnitOfTime.SECONDS,
+                "icon": "mdi:timer-outline",
+                "device": None,
+                "state": SensorStateClass.TOTAL_INCREASING,
+                "entity_category": EntityCategory.DIAGNOSTIC,
+            },
             "PVS_MEMORY_USED": {
                 "field": "dl_mem_used",
                 "title": "{SUN_POWER}{MODEL} {SERIAL} Memory Used",
