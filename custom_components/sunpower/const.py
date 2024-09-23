@@ -28,9 +28,12 @@ SUNPOWER_HOST = "host"
 SUNPOWER_COORDINATOR = "coordinator"
 DEFAULT_SUNPOWER_UPDATE_INTERVAL = 120
 DEFAULT_SUNVAULT_UPDATE_INTERVAL = 60
+DEFAULT_LIVEDATA_UPDATE_INTERVAL = 5
 MIN_SUNPOWER_UPDATE_INTERVAL = 60
 MIN_SUNVAULT_UPDATE_INTERVAL = 20
+MIN_LIVEDATA_UPDATE_INTERVAL = 1
 SUNPOWER_UPDATE_INTERVAL = "PVS_UPDATE_INTERVAL"
+LIVEDATA_UPDATE_INTERVAL = "LIVEDATA_UPDATE_INTERVAL"
 SUNVAULT_UPDATE_INTERVAL = "ESS_UPDATE_INTERVAL"
 SETUP_TIMEOUT_MIN = 5
 
@@ -41,6 +44,7 @@ BATTERY_DEVICE_TYPE = "ESS BMS"
 ESS_DEVICE_TYPE = "Energy Storage System"
 HUBPLUS_DEVICE_TYPE = "HUB+"
 SUNVAULT_DEVICE_TYPE = "SunVault"
+LIVEDATA_DEVICE_TYPE = "LiveData"
 
 WORKING_STATE = "working"
 
@@ -199,15 +203,6 @@ SUNPOWER_SENSORS = {
             "PVS_UPTIME": {
                 "field": "dl_uptime",
                 "title": "{SUN_POWER}{MODEL} {SERIAL} Uptime",
-                "unit": UnitOfTime.SECONDS,
-                "icon": "mdi:timer-outline",
-                "device": None,
-                "state": SensorStateClass.TOTAL_INCREASING,
-                "entity_category": EntityCategory.DIAGNOSTIC,
-            },
-            "PVS_VARSERVER_UPTIME": {
-                "field": "varserver_uptime",
-                "title": "{SUN_POWER}{MODEL} {SERIAL} Varserver Uptime",
                 "unit": UnitOfTime.SECONDS,
                 "icon": "mdi:timer-outline",
                 "device": None,
@@ -467,6 +462,36 @@ SUNPOWER_SENSORS = {
                 "device": None,
                 "state": SensorStateClass.MEASUREMENT,
                 "entity_category": EntityCategory.DIAGNOSTIC,
+            },
+        },
+    },
+    LIVEDATA_DEVICE_TYPE: {
+        "unique_id": "livedata",
+        "sensors": {
+            "LIVEDATA_TIMESTAMP": {
+                "field": "/sys/livedata/time",
+                "title": "{SUN_POWER}{MODEL} {SERIAL} Timestamp",
+                "unit": UnitOfTime.SECONDS,
+                "icon": "mdi:timer-outline",
+                "device": None,
+                "state": SensorStateClass.TOTAL_INCREASING,
+                "entity_category": EntityCategory.DIAGNOSTIC,
+            },
+            "LIVEDATA_NET_KWH": {
+                "field": "/sys/livedata/net_en",
+                "title": "{SUN_POWER}{DESCR}Lifetime Power",
+                "unit": UnitOfEnergy.KILO_WATT_HOUR,
+                "icon": "mdi:flash",
+                "device": SensorDeviceClass.ENERGY,
+                "state": SensorStateClass.TOTAL,
+            },
+            "LIVEDATA_KW": {
+                "field": "/sys/livedata/net_p",
+                "title": "{SUN_POWER}{DESCR}Power",
+                "unit": UnitOfPower.KILO_WATT,
+                "icon": "mdi:flash",
+                "device": SensorDeviceClass.POWER,
+                "state": SensorStateClass.MEASUREMENT,
             },
         },
     },

@@ -12,14 +12,17 @@ from homeassistant.const import CONF_HOST
 
 from .const import (
     DEFAULT_SUNPOWER_UPDATE_INTERVAL,
+    DEFAULT_LIVEDATA_UPDATE_INTERVAL,
     DEFAULT_SUNVAULT_UPDATE_INTERVAL,
     DOMAIN,
     MIN_SUNPOWER_UPDATE_INTERVAL,
+    MIN_LIVEDATA_UPDATE_INTERVAL,
     MIN_SUNVAULT_UPDATE_INTERVAL,
     SUNPOWER_DESCRIPTIVE_NAMES,
     SUNPOWER_HOST,
     SUNPOWER_PRODUCT_NAMES,
     SUNPOWER_UPDATE_INTERVAL,
+    LIVEDATA_UPDATE_INTERVAL,
     SUNVAULT_UPDATE_INTERVAL,
 )
 from .sunpower import (
@@ -117,6 +120,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 errors[SUNPOWER_UPDATE_INTERVAL] = "MIN_INTERVAL"
             if user_input[SUNVAULT_UPDATE_INTERVAL] < MIN_SUNVAULT_UPDATE_INTERVAL:
                 errors[SUNPOWER_UPDATE_INTERVAL] = "MIN_INTERVAL"
+            if user_input[LIVEDATA_UPDATE_INTERVAL] < MIN_LIVEDATA_UPDATE_INTERVAL:
+                errors[LIVEDATA_UPDATE_INTERVAL] = "MIN_INTERVAL"
             if len(errors) == 0:
                 options[SUNPOWER_UPDATE_INTERVAL] = user_input[SUNPOWER_UPDATE_INTERVAL]
                 options[SUNVAULT_UPDATE_INTERVAL] = user_input[SUNVAULT_UPDATE_INTERVAL]
@@ -126,6 +131,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             SUNPOWER_UPDATE_INTERVAL,
             DEFAULT_SUNPOWER_UPDATE_INTERVAL,
         )
+        current_live_data_interval = options.get(
+            LIVEDATA_UPDATE_INTERVAL,
+            DEFAULT_LIVEDATA_UPDATE_INTERVAL,
+        )
+
         current_sunvault_interval = options.get(
             SUNVAULT_UPDATE_INTERVAL,
             DEFAULT_SUNVAULT_UPDATE_INTERVAL,
@@ -136,6 +146,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(SUNPOWER_UPDATE_INTERVAL, default=current_sunpower_interval): int,
+                    vol.Required(LIVEDATA_UPDATE_INTERVAL, default=current_live_data_interval): int,
                     vol.Required(SUNVAULT_UPDATE_INTERVAL, default=current_sunvault_interval): int,
                 },
             ),

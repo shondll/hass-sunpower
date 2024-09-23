@@ -24,6 +24,7 @@
       "init": {
         "data": {
           "PVS_UPDATE_INTERVAL": "Solar data update interval (not less than 60)",
+          "LIVEDATA_UPDATE_INTERVAL": "Live data update interval (not less than 1)",
           "ESS_UPDATE_INTERVAL": "Energy storage update interval (not less than 20)"
         },
         "description": "Update intervals to change the polling rate, reminder: the PVS is slow"

@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import (
     BATTERY_DEVICE_TYPE,
     DEFAULT_SUNPOWER_UPDATE_INTERVAL,
+    DEFAULT_LIVEDATA_UPDATE_INTERVAL,
     DEFAULT_SUNVAULT_UPDATE_INTERVAL,
     DOMAIN,
     ESS_DEVICE_TYPE,
@@ -21,6 +22,7 @@ from .const import (
     INVERTER_DEVICE_TYPE,
     METER_DEVICE_TYPE,
     PVS_DEVICE_TYPE,
+    LIVEDATA_DEVICE_TYPE,
     SETUP_TIMEOUT_MIN,
     SUNPOWER_COORDINATOR,
     SUNPOWER_HOST,
@@ -28,6 +30,7 @@ from .const import (
     SUNPOWER_UPDATE_INTERVAL,
     SUNVAULT_DEVICE_TYPE,
     SUNVAULT_UPDATE_INTERVAL,
+    LIVEDATA_UPDATE_INTERVAL,
 )
 from .sunpower import ConnectionException, ParseException, SunPowerMonitor
 
@@ -38,6 +41,7 @@ CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 PLATFORMS = ["binary_sensor", "sensor"]
 
 PREVIOUS_PVS_SAMPLE_TIME = 0
+PREVIOUS_LIVEDATA_SAMPLE_TIME = 0
 PREVIOUS_PVS_SAMPLE = {}
 PREVIOUS_ESS_SAMPLE_TIME = 0
 PREVIOUS_ESS_SAMPLE = {}
@@ -93,10 +97,6 @@ def convert_sunpower_data(sunpower_data):
     for device in sunpower_data["devices"]:
         dev_type = device["DEVICE_TYPE"]
         data.setdefault(dev_type, {})[device["SERIAL"]] = device
-        if dev_type == PVS_DEVICE_TYPE:
-            data[PVS_DEVICE_TYPE][device["SERIAL"]]["varserver_uptime"] = sunpower_data[
-                "varserver_uptime"
-            ]
 
     create_vmeter(data)
 
@@ -265,6 +265,7 @@ def convert_ess_data(ess_data, data):
 def sunpower_fetch(
     sunpower_monitor,
     sunpower_update_invertal,
+    livedata_update_invertal,
     sunvault_update_invertal,
 ):
     """Get and reformat sunpower data to a dict of device type and serial #. Basic data fetch routine."""
@@ -273,9 +274,11 @@ def sunpower_fetch(
     global PREVIOUS_PVS_SAMPLE
     global PREVIOUS_ESS_SAMPLE_TIME
     global PREVIOUS_ESS_SAMPLE
+    global PREVIOUS_LIVEDATA_SAMPLE_TIME
 
     sunpower_data = PREVIOUS_PVS_SAMPLE
     ess_data = PREVIOUS_ESS_SAMPLE
+    livedata = None
     use_ess = False
     data = None
 
@@ -287,6 +290,24 @@ def sunpower_fetch(
             _LOGGER.debug("got PVS data %s", sunpower_data)
     except (ParseException, ConnectionException) as error:
         raise UpdateFailed from error
+
+    try:
+        if (time.time() - PREVIOUS_LIVEDATA_SAMPLE_TIME) >= (
+            livedata_update_invertal - 1
+        ):
+            PREVIOUS_LIVEDATA_SAMPLE_TIME = time.time()
+            livedata = sunpower_monitor.get_livedata()
+            _LOGGER.debug("got LiveData data %s", livedata)
+    except (ParseException, ConnectionException) as error:
+        raise UpdateFailed from error
+
+    # merge livedata into PVS data
+    if livedata:
+        # delete the old livedata, find it by the device type
+        for device in sunpower_data["devices"]:
+            if device["DEVICE_TYPE"] == LIVEDATA_DEVICE_TYPE:
+                del sunpower_data["devices"][sunpower_data["devices"].index(device)]
+        sunpower_data["devices"].extend(livedata["devices"])
 
     data = convert_sunpower_data(sunpower_data)
     if ESS_DEVICE_TYPE in data:  # Look for an ESS in PVS data
@@ -345,6 +366,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         SUNPOWER_UPDATE_INTERVAL,
         DEFAULT_SUNPOWER_UPDATE_INTERVAL,
     )
+    livedata_update_invertal = entry.options.get(
+        LIVEDATA_UPDATE_INTERVAL,
+        DEFAULT_LIVEDATA_UPDATE_INTERVAL,
+    )
+
     sunvault_update_invertal = entry.options.get(
         SUNVAULT_UPDATE_INTERVAL,
         DEFAULT_SUNVAULT_UPDATE_INTERVAL,
@@ -357,12 +383,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             sunpower_fetch,
             sunpower_monitor,
             sunpower_update_invertal,
+            livedata_update_invertal,
             sunvault_update_invertal,
         )
 
     # This could be better, taking the shortest time interval as the coordinator update is fine
     # if the long interval is an even multiple of the short or *much* smaller
-    coordinator_interval = min(sunpower_update_invertal, sunvault_update_invertal)
+    coordinator_interval = min(
+        sunpower_update_invertal, livedata_update_invertal, sunvault_update_invertal
+    )
 
     _LOGGER.debug(
         f"Intervals: Sunpower {sunpower_update_invertal} Sunvault {sunvault_update_invertal}",  # noqa: G004

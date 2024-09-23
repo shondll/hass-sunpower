@@ -32,7 +32,9 @@ class SunPowerMonitor:
 
         # Use JWT authentication
         # comment out to use basic authentication
-        self.pvs.fcgi_client.set_jwt_request_url("https://pvs-auth-mgr.dev.mysunpower.com:443/v1/auth/token")
+        self.pvs.fcgi_client.set_jwt_request_url(
+            "https://pvs-auth-mgr.dev.mysunpower.com:443/v1/auth/token"
+        )
         self.pvs.fcgi_client.set_pvs_details(
             {
                 "serial": "ZT190885000549A1562",
@@ -59,11 +61,21 @@ class SunPowerMonitor:
         """Get a list of all devices connected to the PVS."""
 
         resp = self.generic_command("DeviceList")
-        uptime = self.pvs.getVarserverVar("/sys/info/uptime")
-        resp["varserver_uptime"] = uptime
+        # uptime = self.pvs.getVarserverVar("/sys/info/uptime")
+        # resp["varserver_uptime"] = uptime
 
-        print(resp)
+        # print(resp)
         return resp
+
+    def get_livedata(self):
+        """Get the current live data from the PVS."""
+        livedata = {"devices": [{}]}
+        livedata["devices"][0] = self.pvs.getVarserverVars("/sys/livedata")
+        livedata["devices"][0]["DEVICE_TYPE"] = "LiveData"
+        livedata["devices"][0]["SERIAL"] = "ZT190885000549A1562"
+        livedata["devices"][0]["DESCR"] = "Live Data"
+
+        return livedata
 
     def energy_storage_system_status(self):
         """Get the status of the energy storage system."""
