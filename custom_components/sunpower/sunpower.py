@@ -21,12 +21,13 @@ class SunPowerMonitor:
     do not have a public API.
     """
 
-    def __init__(self, host) -> None:
+    def __init__(self, host, session) -> None:
         """Initialize."""
         self.host = host
         self.command_url = f"http://{host}/cgi-bin/dl_cgi?Command="
 
-        self.pvs = PVS(port=20566)
+        client_id = "ALsuV7T7IVqJn9yISPqii4oZi4gq6bWaQYH6mff1wPXYtUzgzc"
+        self.pvs = PVS(port=20566, session=session, client_id=client_id)
         self.pvs.ip = self.host
         self.pvs.update_clients()
 
@@ -67,15 +68,20 @@ class SunPowerMonitor:
         # print(resp)
         return resp
 
-    def get_livedata(self):
+    async def get_livedata(self):
         """Get the current live data from the PVS."""
         livedata = {"devices": [{}]}
-        livedata["devices"][0] = self.pvs.getVarserverVars("/sys/livedata")
+        livedata["devices"][0] = await self.pvs.getVarserverVars("/sys/livedata")
         livedata["devices"][0]["DEVICE_TYPE"] = "LiveData"
         livedata["devices"][0]["SERIAL"] = "ZT190885000549A1562"
         livedata["devices"][0]["DESCR"] = "Live Data"
 
         return livedata
+
+    async def get_sn(self):
+        # return self.pvs.get_sn()
+        sn = await self.pvs.getVarserverVar("/sys/info/sn")
+        return sn
 
     def energy_storage_system_status(self):
         """Get the status of the energy storage system."""
@@ -88,7 +94,3 @@ class SunPowerMonitor:
             raise ConnectionException from error
         except simplejson.errors.JSONDecodeError as error:
             raise ParseException from error
-
-    def network_status(self):
-        """Get a list of network interfaces on the PVS."""
-        return self.generic_command("Get_Comm")

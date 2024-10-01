@@ -11,6 +11,8 @@ from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
 from .const import (
     BATTERY_DEVICE_TYPE,
     DEFAULT_SUNPOWER_UPDATE_INTERVAL,
@@ -265,7 +267,6 @@ def convert_ess_data(ess_data, data):
 def sunpower_fetch(
     sunpower_monitor,
     sunpower_update_invertal,
-    livedata_update_invertal,
     sunvault_update_invertal,
 ):
     """Get and reformat sunpower data to a dict of device type and serial #. Basic data fetch routine."""
@@ -288,16 +289,6 @@ def sunpower_fetch(
             sunpower_data = sunpower_monitor.device_list()
             PREVIOUS_PVS_SAMPLE = sunpower_data
             _LOGGER.debug("got PVS data %s", sunpower_data)
-    except (ParseException, ConnectionException) as error:
-        raise UpdateFailed from error
-
-    try:
-        if (time.time() - PREVIOUS_LIVEDATA_SAMPLE_TIME) >= (
-            livedata_update_invertal - 1
-        ):
-            PREVIOUS_LIVEDATA_SAMPLE_TIME = time.time()
-            livedata = sunpower_monitor.get_livedata()
-            _LOGGER.debug("got LiveData data %s", livedata)
     except (ParseException, ConnectionException) as error:
         raise UpdateFailed from error
 
@@ -361,7 +352,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     entry_id = entry.entry_id
 
     hass.data[DOMAIN].setdefault(entry_id, {})
-    sunpower_monitor = SunPowerMonitor(entry.data[SUNPOWER_HOST])
+    session = async_get_clientsession(hass, False)
+    sunpower_monitor = SunPowerMonitor(entry.data[SUNPOWER_HOST], session)
     sunpower_update_invertal = entry.options.get(
         SUNPOWER_UPDATE_INTERVAL,
         DEFAULT_SUNPOWER_UPDATE_INTERVAL,
@@ -378,12 +370,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     async def async_update_data():
         """Fetch data from API endpoint, used by coordinator to get mass data updates."""
+
+        global PREVIOUS_LIVEDATA_SAMPLE_TIME
+
         _LOGGER.debug("Updating SunPower data")
+
+        try:
+            if (time.time() - PREVIOUS_LIVEDATA_SAMPLE_TIME) >= (
+                livedata_update_invertal - 1
+            ):
+                PREVIOUS_LIVEDATA_SAMPLE_TIME = time.time()
+                livedata = await sunpower_monitor.get_livedata()
+                _LOGGER.debug("got LiveData data %s", livedata)
+        except (ParseException, ConnectionException) as error:
+            raise UpdateFailed from error
+
         return await hass.async_add_executor_job(
             sunpower_fetch,
             sunpower_monitor,
             sunpower_update_invertal,
-            livedata_update_invertal,
             sunvault_update_invertal,
         )
 

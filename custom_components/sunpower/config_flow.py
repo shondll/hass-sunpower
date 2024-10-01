@@ -9,6 +9,7 @@ from homeassistant import (
     exceptions,
 )
 from homeassistant.const import CONF_HOST
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DEFAULT_SUNPOWER_UPDATE_INTERVAL,
@@ -47,11 +48,13 @@ async def validate_input(hass: core.HomeAssistant, data):
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
 
-    spm = SunPowerMonitor(data[SUNPOWER_HOST])
+    session = hass.helpers.aiohttp_client.async_get_clientsession()
+    spm = SunPowerMonitor(data[SUNPOWER_HOST], session)
     name = "PVS {}".format(data[SUNPOWER_HOST])
     try:
-        response = await hass.async_add_executor_job(spm.network_status)
-        _LOGGER.debug("Got from %s %s", data[SUNPOWER_HOST], response)
+        sn = await spm.get_sn()
+        _LOGGER.debug("Got from %s, serial %s", data[SUNPOWER_HOST], sn)
+        name = f"PVS {sn}"
     except ConnectionException as error:
         raise CannotConnect from error
 
