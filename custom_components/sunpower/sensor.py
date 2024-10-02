@@ -74,6 +74,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     text_sunvault = "" if not do_product_names else "SunVault "
                     text_pvs = "" if not do_product_names else "PVS "
                     sensor_index = "" if not do_descriptive_names else f"{index + 1} "
+                    state_class = None if "state" not in sensor else sensor["state"]
+                    unit = None if "unit" not in sensor else sensor["unit"]
                     sunpower_sensor = SunPowerSensor(
                         coordinator=coordinator,
                         my_info=sensor_data,
@@ -91,10 +93,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                             SERIAL=sensor_data.get("SERIAL", "Unknown"),
                             MODEL=sensor_data.get("MODEL", "Unknown"),
                         ),
-                        unit=sensor["unit"],
+                        unit=unit,
                         icon=sensor["icon"],
                         device_class=sensor["device"],
-                        state_class=sensor["state"],
+                        state_class=state_class,
                         entity_category=sensor.get("entity_category", None),
                     )
                     if sunpower_sensor.native_value is not None:

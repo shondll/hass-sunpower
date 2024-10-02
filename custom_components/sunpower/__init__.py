@@ -44,7 +44,7 @@ PLATFORMS = ["binary_sensor", "sensor"]
 
 PREVIOUS_PVS_SAMPLE_TIME = 0
 PREVIOUS_LIVEDATA_SAMPLE_TIME = 0
-PREVIOUS_PVS_SAMPLE = {}
+PREVIOUS_PVS_SAMPLE = {"devices": []}
 PREVIOUS_ESS_SAMPLE_TIME = 0
 PREVIOUS_ESS_SAMPLE = {}
 
@@ -100,7 +100,7 @@ def convert_sunpower_data(sunpower_data):
         dev_type = device["DEVICE_TYPE"]
         data.setdefault(dev_type, {})[device["SERIAL"]] = device
 
-    create_vmeter(data)
+    # create_vmeter(data)
 
     return data
 
@@ -372,8 +372,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         """Fetch data from API endpoint, used by coordinator to get mass data updates."""
 
         global PREVIOUS_LIVEDATA_SAMPLE_TIME
+        global PREVIOUS_PVS_SAMPLE_TIME
+        global PREVIOUS_PVS_SAMPLE
 
         _LOGGER.debug("Updating SunPower data")
+
+        sunpower_data = PREVIOUS_PVS_SAMPLE
+        livedata = None
+        pvs_info = None
 
         try:
             if (time.time() - PREVIOUS_LIVEDATA_SAMPLE_TIME) >= (
@@ -381,16 +387,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             ):
                 PREVIOUS_LIVEDATA_SAMPLE_TIME = time.time()
                 livedata = await sunpower_monitor.get_livedata()
+                pvs_info = await sunpower_monitor.get_pvs_info()
                 _LOGGER.debug("got LiveData data %s", livedata)
         except (ParseException, ConnectionException) as error:
             raise UpdateFailed from error
 
-        return await hass.async_add_executor_job(
-            sunpower_fetch,
-            sunpower_monitor,
-            sunpower_update_invertal,
-            sunvault_update_invertal,
-        )
+        # try:
+        #     if (time.time() - PREVIOUS_PVS_SAMPLE_TIME) >= (
+        #         sunpower_update_invertal - 1
+        #     ):
+        #         PREVIOUS_PVS_SAMPLE_TIME = time.time()
+        #         sunpower_data = await sunpower_monitor.get_pvs_info()
+        #         PREVIOUS_PVS_SAMPLE = sunpower_data
+        #         _LOGGER.debug("got PVS data %s", sunpower_data)
+        # except (ParseException, ConnectionException) as error:
+        #     raise UpdateFailed from error
+
+        if livedata and pvs_info:
+            sunpower_data = {"devices": [pvs_info, livedata]}
+            PREVIOUS_PVS_SAMPLE = sunpower_data
+
+        return convert_sunpower_data(sunpower_data)
+
+        # return await hass.async_add_executor_job(
+        #     sunpower_fetch,
+        #     sunpower_monitor,
+        #     sunpower_update_invertal,
+        #     sunvault_update_invertal,
+        # )
 
     # This could be better, taking the shortest time interval as the coordinator update is fine
     # if the long interval is an even multiple of the short or *much* smaller

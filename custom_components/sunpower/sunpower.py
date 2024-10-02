@@ -2,8 +2,12 @@
 
 import requests
 import simplejson
+import logging
 from .pypvs.pypvs.pvs import PVS
 
+from .const import LIVEDATA_DEVICE_TYPE, PVS_DEVICE_TYPE
+
+_LOGGER = logging.getLogger(__name__)
 
 class ConnectionException(Exception):
     """Any failure to connect to sunpower PVS."""
@@ -29,6 +33,7 @@ class SunPowerMonitor:
         client_id = "ALsuV7T7IVqJn9yISPqii4oZi4gq6bWaQYH6mff1wPXYtUzgzc"
         self.pvs = PVS(port=20566, session=session, client_id=client_id)
         self.pvs.ip = self.host
+        self.pvs.sn = "ZT190885000549A1562"
         self.pvs.update_clients()
 
         # Use JWT authentication
@@ -38,7 +43,7 @@ class SunPowerMonitor:
         )
         self.pvs.fcgi_client.set_pvs_details(
             {
-                "serial": "ZT190885000549A1562",
+                "serial": self.pvs.sn,
                 "ssid": "SunPower08562",
                 "wpa_key": "CD4A828E",
                 "mac": "00:22:F2:0B:48:60",
@@ -68,13 +73,38 @@ class SunPowerMonitor:
         # print(resp)
         return resp
 
+    async def get_pvs_info(self):
+        """Get a list of all devices connected to the PVS."""
+        pvs_info = {}
+        try:
+            pvs_info = await self.pvs.getVarserverVars("/sys/info")
+            pvs_info["/sys/info/uptime"] = await self.pvs.getVarserverVar("/sys/info/uptime")
+            pvs_info["/sys/info/mem_used"] = 9999
+            pvs_info["/sys/info/flash_avail"] = 88888
+            pvs_info["STATE"] = "ONLINE"
+        except Exception as error:
+            _LOGGER.exception(f"Failed to get PVS info!")
+            pvs_info["STATE"] = "OFFLINE"
+
+        pvs_info["DEVICE_TYPE"] = PVS_DEVICE_TYPE
+        pvs_info["SERIAL"] = self.pvs.sn
+        pvs_info["DESCR"] = "PV Supervisor"
+
+        return pvs_info
+
     async def get_livedata(self):
         """Get the current live data from the PVS."""
-        livedata = {"devices": [{}]}
-        livedata["devices"][0] = await self.pvs.getVarserverVars("/sys/livedata")
-        livedata["devices"][0]["DEVICE_TYPE"] = "LiveData"
-        livedata["devices"][0]["SERIAL"] = "ZT190885000549A1562"
-        livedata["devices"][0]["DESCR"] = "Live Data"
+        livedata = {}
+        try:
+            livedata = await self.pvs.getVarserverVars("/sys/livedata")
+            livedata["STATE"] = "ONLINE"
+        except Exception as error:
+            _LOGGER.exception(f"Failed to get live data!")
+            livedata["STATE"] = "OFFLINE"
+
+        livedata["DEVICE_TYPE"] = LIVEDATA_DEVICE_TYPE
+        livedata["SERIAL"] = self.pvs.sn
+        livedata["DESCR"] = "Live Data"
 
         return livedata
 
