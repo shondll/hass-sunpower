@@ -1,0 +1,16 @@
+{
+  "domain": "pvs6",
+  "name": "PVS6",
+  "codeowners": ["@shondll"],
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/pvs6",
+  "iot_class": "local_polling",
+  "loggers": ["pypvs"],
+  "requirements": ["pypvs"],
+  "zeroconf": [
+    {
+      "type": "_pvs6._tcp.local."
+    }
+  ],
+  "version": "0.0.1"
+}
