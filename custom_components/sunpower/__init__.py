@@ -380,31 +380,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         sunpower_data = PREVIOUS_PVS_SAMPLE
         livedata = None
         pvs_info = None
+        inverter_data = None
+        meter_data = None
 
         try:
             if (time.time() - PREVIOUS_LIVEDATA_SAMPLE_TIME) >= (
                 livedata_update_invertal - 1
             ):
                 PREVIOUS_LIVEDATA_SAMPLE_TIME = time.time()
-                livedata = await sunpower_monitor.get_livedata()
                 pvs_info = await sunpower_monitor.get_pvs_info()
+                await asyncio.sleep(1)
+                livedata = await sunpower_monitor.get_livedata()
+                await asyncio.sleep(1)
+                inverter_data = await sunpower_monitor.get_inverter_data()
+                await asyncio.sleep(1)
+                meter_data = await sunpower_monitor.get_meter_data()
+
                 _LOGGER.debug("got LiveData data %s", livedata)
         except (ParseException, ConnectionException) as error:
             raise UpdateFailed from error
 
-        # try:
-        #     if (time.time() - PREVIOUS_PVS_SAMPLE_TIME) >= (
-        #         sunpower_update_invertal - 1
-        #     ):
-        #         PREVIOUS_PVS_SAMPLE_TIME = time.time()
-        #         sunpower_data = await sunpower_monitor.get_pvs_info()
-        #         PREVIOUS_PVS_SAMPLE = sunpower_data
-        #         _LOGGER.debug("got PVS data %s", sunpower_data)
-        # except (ParseException, ConnectionException) as error:
-        #     raise UpdateFailed from error
-
-        if livedata and pvs_info:
-            sunpower_data = {"devices": [pvs_info, livedata]}
+        if pvs_info:
+            sunpower_data = {"devices": [pvs_info]}
+            if livedata:
+                sunpower_data["devices"].extend([livedata])
+            if inverter_data:
+                sunpower_data["devices"].extend(inverter_data)
+            if meter_data:
+                sunpower_data["devices"].extend(meter_data)
             PREVIOUS_PVS_SAMPLE = sunpower_data
 
         return convert_sunpower_data(sunpower_data)

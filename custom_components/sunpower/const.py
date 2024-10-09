@@ -46,7 +46,7 @@ HUBPLUS_DEVICE_TYPE = "HUB+"
 SUNVAULT_DEVICE_TYPE = "SunVault"
 LIVEDATA_DEVICE_TYPE = "LiveData"
 
-WORKING_STATE = "working"
+WORKING_STATE = "ONLINE"
 
 # SUNPOWER_DESCRIPTIVE_NAMES will take advantage of the following:
 # - {SUN_POWER} is replaced with "SunPower "
@@ -169,10 +169,10 @@ SUNPOWER_SENSORS = {
                 "state": SensorStateClass.TOTAL_INCREASING,
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
-            "PVS_MEMORY_USED": {
-                "field": "/sys/info/mem_used",
-                "title": "{SUN_POWER}{MODEL} {SERIAL} Memory Used",
-                "unit": UnitOfInformation.KILOBYTES,
+            "PVS_RAM_AVAILABLE": {
+                "field": "/sys/info/ram_free_MB",
+                "title": "{SUN_POWER}{MODEL} {SERIAL} Memory Available",
+                "unit": UnitOfInformation.MEGABYTES,
                 "icon": "mdi:memory",
                 "device": None,
                 "state": SensorStateClass.MEASUREMENT,
@@ -181,7 +181,7 @@ SUNPOWER_SENSORS = {
             "PVS_FLASH_AVAILABLE": {
                 "field": "/sys/info/flash_avail",
                 "title": "{SUN_POWER}{MODEL} {SERIAL} Flash Available",
-                "unit": UnitOfInformation.KILOBYTES,
+                "unit": UnitOfInformation.MEGABYTES,
                 "icon": "mdi:memory",
                 "device": None,
                 "state": SensorStateClass.MEASUREMENT,
@@ -193,7 +193,7 @@ SUNPOWER_SENSORS = {
         "unique_id": "meter",
         "sensors": {
             "METER_FREQUENCY": {
-                "field": "freq_hz",
+                "field": "freqHz",
                 "title": "{SUN_POWER}{DESCR}Frequency",
                 "unit": UnitOfFrequency.HERTZ,
                 "icon": "mdi:flash",
@@ -201,7 +201,7 @@ SUNPOWER_SENSORS = {
                 "state": SensorStateClass.MEASUREMENT,
             },
             "METER_NET_KWH": {
-                "field": "net_ltea_3phsum_kwh",
+                "field": "netLtea3phsumKwh",
                 "title": "{SUN_POWER}{DESCR}Lifetime Power",
                 "unit": UnitOfEnergy.KILO_WATT_HOUR,
                 "icon": "mdi:flash",
@@ -209,7 +209,7 @@ SUNPOWER_SENSORS = {
                 "state": SensorStateClass.TOTAL,
             },
             "METER_KW": {
-                "field": "p_3phsum_kw",
+                "field": "p3phsumKw",
                 "title": "{SUN_POWER}{DESCR}Power",
                 "unit": UnitOfPower.KILO_WATT,
                 "icon": "mdi:flash",
@@ -217,7 +217,7 @@ SUNPOWER_SENSORS = {
                 "state": SensorStateClass.MEASUREMENT,
             },
             "METER_VAR": {
-                "field": "q_3phsum_kvar",
+                "field": "q3phsumKvar",
                 "title": "{SUN_POWER}{DESCR}KVA Reactive",
                 "unit": POWER_VOLT_AMPERE_REACTIVE,
                 "icon": "mdi:flash",
@@ -226,7 +226,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "METER_VA": {
-                "field": "s_3phsum_kva",
+                "field": "s3phsumKva",
                 "title": "{SUN_POWER}{DESCR}KVA Apparent",
                 "unit": UnitOfApparentPower.VOLT_AMPERE,
                 "icon": "mdi:flash",
@@ -235,7 +235,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "METER_POWER_FACTOR": {
-                "field": "tot_pf_rto",
+                "field": "totPfRto",
                 "title": "{SUN_POWER}{DESCR}Power Factor",
                 "unit": PERCENTAGE,
                 "icon": "mdi:flash",
@@ -244,7 +244,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "METER_L1_A": {
-                "field": "i1_a",
+                "field": "i1A",
                 "title": "{SUN_POWER}{DESCR}Leg 1 Amps",
                 "unit": UnitOfElectricCurrent.AMPERE,
                 "icon": "mdi:flash",
@@ -252,17 +252,8 @@ SUNPOWER_SENSORS = {
                 "state": SensorStateClass.MEASUREMENT,
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
-            "METER_A": {
-                "field": "i_a",
-                "title": "{SUN_POWER}{DESCR}Amps",
-                "unit": UnitOfElectricCurrent.AMPERE,
-                "icon": "mdi:flash",
-                "device": SensorDeviceClass.CURRENT,
-                "state": SensorStateClass.MEASUREMENT,
-                "entity_category": EntityCategory.DIAGNOSTIC,
-            },
             "METER_L2_A": {
-                "field": "i2_a",
+                "field": "i2A",
                 "title": "{SUN_POWER}{DESCR}Leg 2 Amps",
                 "unit": UnitOfElectricCurrent.AMPERE,
                 "icon": "mdi:flash",
@@ -271,7 +262,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "METER_L1_KW": {
-                "field": "p1_kw",
+                "field": "p1Kw",
                 "title": "{SUN_POWER}{DESCR}Leg 1 KW",
                 "unit": UnitOfPower.KILO_WATT,
                 "icon": "mdi:flash",
@@ -280,7 +271,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "METER_L2_KW": {
-                "field": "p2_kw",
+                "field": "p2Kw",
                 "title": "{SUN_POWER}{DESCR}Leg 2 KW",
                 "unit": UnitOfPower.KILO_WATT,
                 "icon": "mdi:flash",
@@ -289,7 +280,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "METER_L1_V": {
-                "field": "v1n_v",
+                "field": "v1nV",
                 "title": "{SUN_POWER}{DESCR}Leg 1 Volts",
                 "unit": UnitOfElectricPotential.VOLT,
                 "icon": "mdi:flash",
@@ -298,7 +289,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "METER_L2_V": {
-                "field": "v2n_v",
+                "field": "v2nV",
                 "title": "{SUN_POWER}{DESCR}Leg 2 Volts",
                 "unit": UnitOfElectricPotential.VOLT,
                 "icon": "mdi:flash",
@@ -307,7 +298,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "METER_L12_V": {
-                "field": "v12_v",
+                "field": "v12V",
                 "title": "{SUN_POWER}{DESCR}Supply Volts",
                 "unit": UnitOfElectricPotential.VOLT,
                 "icon": "mdi:flash",
@@ -315,28 +306,20 @@ SUNPOWER_SENSORS = {
                 "state": SensorStateClass.MEASUREMENT,
             },
             "METER_TO_GRID": {
-                "field": "neg_ltea_3phsum_kwh",
+                "field": "negLtea3phsumKwh",
                 "title": "{SUN_POWER}{DESCR}KWh To Grid",
                 "unit": UnitOfEnergy.KILO_WATT_HOUR,
                 "icon": "mdi:flash",
                 "device": SensorDeviceClass.ENERGY,
                 "state": SensorStateClass.TOTAL,
-            },
-            "METER_TO_HOME": {
-                "field": "pos_ltea_3phsum_kwh",
-                "title": "{SUN_POWER}{DESCR}KWh To Home",
-                "unit": UnitOfEnergy.KILO_WATT_HOUR,
-                "icon": "mdi:flash",
-                "device": SensorDeviceClass.ENERGY,
-                "state": SensorStateClass.TOTAL_INCREASING,
-            },
+            }
         },
     },
     INVERTER_DEVICE_TYPE: {
         "unique_id": "inverter",
         "sensors": {
             "INVERTER_NET_KWH": {
-                "field": "ltea_3phsum_kwh",
+                "field": "ltea3phsumKwh",
                 "title": "{SUN_POWER}{DESCR}Lifetime Power",
                 "unit": UnitOfEnergy.KILO_WATT_HOUR,
                 "icon": "mdi:flash",
@@ -344,7 +327,7 @@ SUNPOWER_SENSORS = {
                 "state": SensorStateClass.TOTAL_INCREASING,
             },
             "INVERTER_KW": {
-                "field": "p_3phsum_kw",
+                "field": "p3phsumKw",
                 "title": "{SUN_POWER}{DESCR}Power",
                 "unit": UnitOfPower.KILO_WATT,
                 "icon": "mdi:flash",
@@ -352,7 +335,7 @@ SUNPOWER_SENSORS = {
                 "state": SensorStateClass.MEASUREMENT,
             },
             "INVERTER_VOLTS": {
-                "field": "vln_3phavg_v",
+                "field": "vln3phavgV",
                 "title": "{SUN_POWER}{DESCR}Voltage",
                 "unit": UnitOfElectricPotential.VOLT,
                 "icon": "mdi:flash",
@@ -361,7 +344,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "INVERTER_AMPS": {
-                "field": "i_3phsum_a",
+                "field": "i3phsumA",
                 "title": "{SUN_POWER}{DESCR}Amps",
                 "unit": UnitOfElectricCurrent.AMPERE,
                 "icon": "mdi:flash",
@@ -369,17 +352,8 @@ SUNPOWER_SENSORS = {
                 "state": SensorStateClass.MEASUREMENT,
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
-            "INVERTER_MPPT_KW": {
-                "field": "p_mpptsum_kw",
-                "title": "{SUN_POWER}{DESCR}MPPT Sum KW",
-                "unit": UnitOfPower.KILO_WATT,
-                "icon": "mdi:flash",
-                "device": SensorDeviceClass.POWER,
-                "state": SensorStateClass.MEASUREMENT,
-                "entity_category": EntityCategory.DIAGNOSTIC,
-            },
             "INVERTER_MPPT1_KW": {
-                "field": "p_mppt1_kw",
+                "field": "pMppt1Kw",
                 "title": "{SUN_POWER}{DESCR}MPPT KW",
                 "unit": UnitOfPower.KILO_WATT,
                 "icon": "mdi:flash",
@@ -388,7 +362,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "INVERTER_MPPT_V": {
-                "field": "v_mppt1_v",
+                "field": "vMppt1V",
                 "title": "{SUN_POWER}{DESCR}MPPT Volts",
                 "unit": UnitOfElectricPotential.VOLT,
                 "icon": "mdi:flash",
@@ -397,7 +371,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "INVERTER_MPPT_A": {
-                "field": "i_mppt1_a",
+                "field": "iMppt1A",
                 "title": "{SUN_POWER}{DESCR}MPPT Amps",
                 "unit": UnitOfElectricCurrent.AMPERE,
                 "icon": "mdi:flash",
@@ -406,7 +380,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "INVERTER_TEMPERATURE": {
-                "field": "t_htsnk_degc",
+                "field": "tHtsnkDegc",
                 "title": "{SUN_POWER}{DESCR}Temperature",
                 "unit": UnitOfTemperature.CELSIUS,
                 "icon": "mdi:thermometer",
@@ -415,7 +389,7 @@ SUNPOWER_SENSORS = {
                 "entity_category": EntityCategory.DIAGNOSTIC,
             },
             "INVERTER_FREQUENCY": {
-                "field": "freq_hz",
+                "field": "freqHz",
                 "title": "{SUN_POWER}{DESCR}Frequency",
                 "unit": UnitOfFrequency.HERTZ,
                 "icon": "mdi:flash",
