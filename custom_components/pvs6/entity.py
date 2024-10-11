@@ -1,26 +1,25 @@
-"""Support for PVS6 by former Sunpower."""
+"""Support for PVS gateway."""
 
 from __future__ import annotations
-
-from pyenphase import EnvoyData
+from typing import Any
 
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .coordinator import EnphaseUpdateCoordinator
+from .coordinator import PVSUpdateCoordinator
 
 
-class EnvoyBaseEntity(CoordinatorEntity[EnphaseUpdateCoordinator]):
-    """Defines a base envoy entity."""
+class EnvoyBaseEntity(CoordinatorEntity[PVSUpdateCoordinator]):
+    """Defines a base PVS entity."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: EnphaseUpdateCoordinator,
+        coordinator: PVSUpdateCoordinator,
         description: EntityDescription,
     ) -> None:
-        """Init the Enphase base entity."""
+        """Init the PVS base entity."""
         self.entity_description = description
         serial_number = coordinator.envoy.serial_number
         assert serial_number is not None
@@ -28,7 +27,7 @@ class EnvoyBaseEntity(CoordinatorEntity[EnphaseUpdateCoordinator]):
         super().__init__(coordinator)
 
     @property
-    def data(self) -> EnvoyData:
+    def data(self) -> dict[str, Any]:
         """Return envoy data."""
         data = self.coordinator.envoy.data
         assert data is not None

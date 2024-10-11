@@ -1,4 +1,4 @@
-"""The enphase_envoy component."""
+"""The PVS coordinator component."""
 
 from __future__ import annotations
 
@@ -9,9 +9,10 @@ import logging
 from typing import Any
 
 from .pypvs.pypvs.pvs import PVS
+from .pypvs.pypvs.exceptions import PVSError
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_NAME, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.const import CONF_NAME
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.event import async_track_time_interval
@@ -24,7 +25,7 @@ SCAN_INTERVAL = timedelta(seconds=60)
 
 TOKEN_REFRESH_CHECK_INTERVAL = timedelta(days=1)
 STALE_TOKEN_THRESHOLD = timedelta(days=30).total_seconds()
-NOTIFICATION_ID = "enphase_envoy_notification"
+NOTIFICATION_ID = "pvs_notification"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ type PVSConfigEntry = ConfigEntry[PVSUpdateCoordinator]
 
 
 class PVSUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """DataUpdateCoordinator to gather data from any envoy."""
+    """DataUpdateCoordinator to gather data from any PVS."""
 
     pvs_serial_number: str
     pvs_firmware: str
@@ -41,12 +42,10 @@ class PVSUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(
         self, hass: HomeAssistant, pvs: PVS, entry: PVSConfigEntry
     ) -> None:
-        """Initialize DataUpdateCoordinator for the envoy."""
-        self.envoy = pvs
+        """Initialize DataUpdateCoordinator for the PVS."""
+        self.pvs = pvs
         entry_data = entry.data
         self.entry = entry
-        self.username = entry_data[CONF_USERNAME]
-        self.password = entry_data[CONF_PASSWORD]
         self._setup_complete = False
         self.pvs_firmware = ""
         self._cancel_token_refresh: CALLBACK_TYPE | None = None
@@ -143,46 +142,46 @@ class PVSUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     #         },
     #     )
 
-    # async def _async_update_data(self) -> dict[str, Any]:
-    #     """Fetch all device and sensor data from api."""
-    #     envoy = self.envoy
-    #     for tries in range(2):
-    #         try:
-    #             if not self._setup_complete:
-    #                 await self._async_setup_and_authenticate()
-    #                 self._async_mark_setup_complete()
-    #             # dump all received data in debug mode to assist troubleshooting
-    #             envoy_data = await envoy.update()
-    #         except INVALID_AUTH_ERRORS as err:
-    #             if self._setup_complete and tries == 0:
-    #                 # token likely expired or firmware changed, try to re-authenticate
-    #                 self._setup_complete = False
-    #                 continue
-    #             raise ConfigEntryAuthFailed from err
-    #         except EnvoyError as err:
-    #             raise UpdateFailed(f"Error communicating with API: {err}") from err
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Fetch all device and sensor data from api."""
+        envoy = self.envoy
+        for tries in range(2):
+            try:
+                if not self._setup_complete:
+                    await self._async_setup_and_authenticate()
+                    self._async_mark_setup_complete()
+                # dump all received data in debug mode to assist troubleshooting
+                envoy_data = await envoy.update()
+            except INVALID_AUTH_ERRORS as err:
+                if self._setup_complete and tries == 0:
+                    # token likely expired or firmware changed, try to re-authenticate
+                    self._setup_complete = False
+                    continue
+                raise ConfigEntryAuthFailed from err
+            except PVSError as err:
+                raise UpdateFailed(f"Error communicating with API: {err}") from err
 
-    #         # if we have a firmware version from previous setup, compare to current one
-    #         # when envoy gets new firmware there will be an authentication failure
-    #         # which results in getting fw version again, if so reload the integration.
-    #         if (current_firmware := self.envoy_firmware) and current_firmware != (
-    #             new_firmware := envoy.firmware
-    #         ):
-    #             _LOGGER.warning(
-    #                 "Envoy firmware changed from: %s to: %s, reloading enphase envoy integration",
-    #                 current_firmware,
-    #                 new_firmware,
-    #             )
-    #             # reload the integration to get all established again
-    #             self.hass.async_create_task(
-    #                 self.hass.config_entries.async_reload(self.entry.entry_id)
-    #             )
-    #         # remember firmware version for next time
-    #         self.envoy_firmware = envoy.firmware
-    #         _LOGGER.debug("Envoy data: %s", envoy_data)
-    #         return envoy_data.raw
+            # # if we have a firmware version from previous setup, compare to current one
+            # # when envoy gets new firmware there will be an authentication failure
+            # # which results in getting fw version again, if so reload the integration.
+            # if (current_firmware := self.envoy_firmware) and current_firmware != (
+            #     new_firmware := envoy.firmware
+            # ):
+            #     _LOGGER.warning(
+            #         "Envoy firmware changed from: %s to: %s, reloading PVS6 integration",
+            #         current_firmware,
+            #         new_firmware,
+            #     )
+            #     # reload the integration to get all established again
+            #     self.hass.async_create_task(
+            #         self.hass.config_entries.async_reload(self.entry.entry_id)
+            #     )
+            # remember firmware version for next time
+            self.envoy_firmware = envoy.firmware
+            _LOGGER.debug("Envoy data: %s", envoy_data)
+            return envoy_data.raw
 
-    #     raise RuntimeError("Unreachable code in _async_update_data")  # pragma: no cover
+        raise RuntimeError("Unreachable code in _async_update_data")  # pragma: no cover
 
     # @callback
     # def async_cancel_token_refresh(self) -> None:

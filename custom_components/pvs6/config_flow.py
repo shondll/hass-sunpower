@@ -1,4 +1,4 @@
-"""Config flow for Enphase Envoy integration."""
+"""Config flow for Enphase PVS integration."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ from .const import (
     INVALID_AUTH_ERRORS,
     OPTION_UPDATE_PERIOD_S,
     OPTION_UPDATE_PERIOD_S_DEFAULT_VALUE,
-    OPTION_UPDATE_PERIOD_S_MIN_VALUE
+    OPTION_UPDATE_PERIOD_S_MIN_VALUE,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,13 +42,12 @@ CONF_SERIAL = "serial"
 INSTALLER_AUTH_USERNAME = "installer"
 
 
-async def validate_input(
-    hass: HomeAssistant, host: str, client_id: str
-) -> PVS:
+async def validate_input(hass: HomeAssistant, host: str, client_id: str = None) -> PVS:
     """Validate the user input allows us to connect."""
     pvs = PVS(session=async_get_clientsession(hass, False), client_id=client_id)
     pvs.ip = host
-    await pvs.get_sn()
+    pvs.update_clients()
+    await pvs.setup()
     return pvs
 
 
@@ -61,7 +60,7 @@ class PVSConfigFlow(ConfigFlow, domain=DOMAIN):
     _reconnect_entry: ConfigEntry
 
     def __init__(self) -> None:
-        """Initialize an envoy flow."""
+        """Initialize an PVS flow."""
         self.ip_address: str | None = None
         self.client_id: str | None = None
 
@@ -83,12 +82,12 @@ class PVSConfigFlow(ConfigFlow, domain=DOMAIN):
         else:
             schema[vol.Required(CONF_HOST)] = str
 
-        if self.client_id:
-            schema[vol.Required(CONF_CLIENT_ID, default=self.client_id)] = vol.In(
-                [self.client_id]
-            )
-        else:
-            schema[vol.Required(CONF_CLIENT_ID)] = str
+        # if self.client_id:
+        #     schema[vol.Required(CONF_CLIENT_ID, default=self.client_id)] = vol.In(
+        #         [self.client_id]
+        #     )
+        # else:
+        #     schema[vol.Required(CONF_CLIENT_ID)] = str
 
         return vol.Schema(schema)
 
@@ -150,8 +149,8 @@ class PVSConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(unique_id, raise_on_progress=False)
         return await self.async_step_user()
 
-    def _async_envoy_name(self) -> str:
-        """Return the name of the envoy."""
+    def _async_pvs_name(self) -> str:
+        """Return the name of the pvs."""
         return f"{PVS6} {self.unique_id}" if self.unique_id else PVS6
 
     async def async_step_user(
@@ -168,11 +167,7 @@ class PVSConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                envoy = await validate_input(
-                    self.hass,
-                    host,
-                    user_input[CONF_CLIENT_ID]
-                )
+                pvs = await validate_input(self.hass, host)
             except INVALID_AUTH_ERRORS as e:
                 errors["base"] = "invalid_auth"
                 description_placeholders = {"reason": str(e)}
@@ -183,7 +178,7 @@ class PVSConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                name = self._async_envoy_name()
+                name = self._async_pvs_name()
 
                 if self.source == SOURCE_REAUTH:
                     return self.async_update_reload_and_abort(
@@ -192,15 +187,15 @@ class PVSConfigFlow(ConfigFlow, domain=DOMAIN):
                     )
 
                 if not self.unique_id:
-                    await self.async_set_unique_id(envoy.serial_number)
-                    name = self._async_envoy_name()
+                    await self.async_set_unique_id(pvs.serial_number)
+                    name = self._async_pvs_name()
 
                 if self.unique_id:
-                    # If envoy exists in configuration update fields and exit
+                    # If PVS exists in configuration update fields and exit
                     self._abort_if_unique_id_configured(
                         {
-                            CONF_HOST: host,
-                            CONF_CLIENT_ID: user_input[CONF_CLIENT_ID]
+                            CONF_HOST: host
+                            # CONF_CLIENT_ID: user_input[CONF_CLIENT_ID]
                         },
                         error="reauth_successful",
                     )
@@ -241,15 +236,11 @@ class PVSConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         host: Any = suggested_values.get(CONF_HOST)
-        client_id: Any = suggested_values.get(CONF_CLIENT_ID)
+        # client_id: Any = suggested_values.get(CONF_CLIENT_ID)
 
         if user_input is not None:
             try:
-                envoy = await validate_input(
-                    self.hass,
-                    host,
-                    client_id
-                )
+                pvs = await validate_input(self.hass, host)
             except INVALID_AUTH_ERRORS as e:
                 errors["base"] = "invalid_auth"
                 description_placeholders = {"reason": str(e)}
@@ -260,17 +251,17 @@ class PVSConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                if self.unique_id != envoy.serial_number:
-                    errors["base"] = "unexpected_envoy"
+                if self.unique_id != pvs.serial_number:
+                    errors["base"] = "unexpected_pvs"
                     description_placeholders = {
-                        "reason": f"target: {self.unique_id}, actual: {envoy.serial_number}"
+                        "reason": f"target: {self.unique_id}, actual: {pvs.serial_number}"
                     }
                 else:
-                    # If envoy exists in configuration update fields and exit
+                    # If PVS exists in configuration update fields and exit
                     self._abort_if_unique_id_configured(
                         {
-                            CONF_HOST: host,
-                            CONF_CLIENT_ID: client_id
+                            CONF_HOST: host
+                            # CONF_CLIENT_ID: client_id
                         },
                         error="reconfigure_successful",
                     )
@@ -312,15 +303,16 @@ class PVSOptionsFlowHandler(OptionsFlowWithConfigEntry):
                 return self.async_create_entry(title="", data=user_input)
 
         current_update_period_s = options.get(
-            OPTION_UPDATE_PERIOD_S,
-            OPTION_UPDATE_PERIOD_S_DEFAULT_VALUE
+            OPTION_UPDATE_PERIOD_S, OPTION_UPDATE_PERIOD_S_DEFAULT_VALUE
         )
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Required(OPTION_UPDATE_PERIOD_S, default=current_update_period_s): int,
+                    vol.Required(
+                        OPTION_UPDATE_PERIOD_S, default=current_update_period_s
+                    ): int,
                 },
             ),
             errors=errors,

@@ -8,24 +8,25 @@ from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.httpx_client import get_async_client
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, PLATFORMS
-from .coordinator import EnphaseConfigEntry, EnphaseUpdateCoordinator
+from .coordinator import PVSUpdateCoordinator, PVSConfigEntry
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: EnphaseConfigEntry) -> bool:
-    """Set up Enphase Envoy from a config entry."""
+async def async_setup_entry(hass: HomeAssistant, entry: PVSConfigEntry) -> bool:
+    """Set up PVS from a config entry."""
 
     host = entry.data[CONF_HOST]
-    envoy = Envoy(host, get_async_client(hass, verify_ssl=False))
-    coordinator = EnphaseUpdateCoordinator(hass, envoy, entry)
+    session = async_get_clientsession(hass)
+    pvs = PVS(session=session)
+    coordinator = PVSUpdateCoordinator(hass, pvs, entry)
 
     await coordinator.async_config_entry_first_refresh()
     if not entry.unique_id:
-        hass.config_entries.async_update_entry(entry, unique_id=envoy.serial_number)
+        hass.config_entries.async_update_entry(entry, unique_id=pvs.serial_number)
 
-    if entry.unique_id != envoy.serial_number:
+    if entry.unique_id != pvs.serial_number:
         # If the serial number of the device does not match the unique_id
         # of the config entry, it likely means the DHCP lease has expired
         # and the device has been assigned a new IP address. We need to
@@ -33,7 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: EnphaseConfigEntry) -> b
         # and update the config entry so we do not mix up devices.
         raise ConfigEntryNotReady(
             f"Unexpected device found at {host}; expected {entry.unique_id}, "
-            f"found {envoy.serial_number}"
+            f"found {pvs.serial_number}"
         )
 
     entry.runtime_data = coordinator
@@ -43,15 +44,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: EnphaseConfigEntry) -> b
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: EnphaseConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: PVSConfigEntry) -> bool:
     """Unload a config entry."""
-    coordinator: EnphaseUpdateCoordinator = entry.runtime_data
+    coordinator: PVSUpdateCoordinator = entry.runtime_data
     coordinator.async_cancel_token_refresh()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def async_remove_config_entry_device(
-    hass: HomeAssistant, config_entry: EnphaseConfigEntry, device_entry: dr.DeviceEntry
+    hass: HomeAssistant, config_entry: PVSConfigEntry, device_entry: dr.DeviceEntry
 ) -> bool:
     """Remove an enphase_envoy config entry from a device."""
     dev_ids = {dev_id[1] for dev_id in device_entry.identifiers if dev_id[0] == DOMAIN}
